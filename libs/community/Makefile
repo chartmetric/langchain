@@ -2,7 +2,7 @@
 
 upload-version:
 	python -m build
-	twine upload --repository-url http://44.229.178.120:8090 dist/* -u pypi -p pypi
+	twine upload --skip-existing --repository-url http://44.229.178.120:8090 dist/* -u pypi -p pypi
 
 # Default target executed when no arguments are given to make.
 all: help

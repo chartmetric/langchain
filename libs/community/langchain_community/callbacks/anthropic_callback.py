@@ -10,9 +10,9 @@ from langchain_core.outputs import ChatGeneration, LLMResult
 from .utils import record_llm_history
 
 MODEL_COST_PER_1K_INPUT_TOKENS = {
+    "claude-instant-1.2": 0.0008,
     "claude-2.0": 0.008,
     "claude-2.1": 0.008,
-    "anthropic.claude-3-sonnet-20240229-v1:0": 0.003,
     "claude-3-sonnet-20240229": 0.003,
     "claude-3-opus-20240229": 0.075,
     "claude-3-5-haiku-20241022": 0.001,
@@ -49,11 +49,13 @@ def _get_anthropic_claude_token_cost(prompt_tokens: int, completion_tokens: int,
 class AnthropicTokenUsageCallbackHandler(BaseCallbackHandler):
     """Callback Handler that tracks anthropic info."""
 
+    prompts: List[str]
     total_tokens: int = 0
     prompt_tokens: int = 0
     completion_tokens: int = 0
     successful_requests: int = 0
     total_cost: float = 0.0
+    llm_history: Dict[str, Any]
 
     def __init__(self) -> None:
         super().__init__()
@@ -75,6 +77,7 @@ class AnthropicTokenUsageCallbackHandler(BaseCallbackHandler):
 
     def on_llm_start(self, serialized: Dict[str, Any], prompts: List[str], **kwargs: Any) -> None:
         """Print out the prompts."""
+        self.prompts = prompts
 
     def on_llm_new_token(self, token: str, **kwargs: Any) -> None:
         """Print out the token."""
