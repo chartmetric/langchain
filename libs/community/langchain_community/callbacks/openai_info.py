@@ -1,11 +1,14 @@
 """Callback Handler that prints to std out."""
 
 import threading
+import time
 from typing import Any, Dict, List
 
+from data_utils.db_access import get_db_connection
 from langchain_core.callbacks import BaseCallbackHandler
 from langchain_core.messages import AIMessage
 from langchain_core.outputs import ChatGeneration, LLMResult
+from .utils import record_llm_history
 
 MODEL_COST_PER_1K_TOKENS = {
     # OpenAI o1-preview input
@@ -200,11 +203,14 @@ def get_openai_token_cost_for_model(
 class OpenAICallbackHandler(BaseCallbackHandler):
     """Callback Handler that tracks OpenAI info."""
 
+    start_time: float = 0
+    prompts: List[str]
     total_tokens: int = 0
     prompt_tokens: int = 0
     completion_tokens: int = 0
     successful_requests: int = 0
     total_cost: float = 0.0
+    llm_history: Dict[str, Any]
 
     def __init__(self) -> None:
         super().__init__()
@@ -228,7 +234,8 @@ class OpenAICallbackHandler(BaseCallbackHandler):
         self, serialized: Dict[str, Any], prompts: List[str], **kwargs: Any
     ) -> None:
         """Print out the prompts."""
-        pass
+        self.prompts = prompts
+        self.start_time = time.time()
 
     def on_llm_new_token(self, token: str, **kwargs: Any) -> None:
         """Print out the token."""
@@ -293,6 +300,9 @@ class OpenAICallbackHandler(BaseCallbackHandler):
         else:
             completion_cost = 0
             prompt_cost = 0
+        
+        with get_db_connection() as conn:
+            self.llm_history = record_llm_history(conn, self.prompts, response)
 
         # update shared state behind lock
         with self._lock:
