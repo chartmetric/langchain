@@ -1,9 +1,12 @@
+from json import loads, dumps
+import logging
 import hashlib
 from pathlib import Path
 from typing import Any, Dict, Iterable, Tuple, Union
 
 from langchain_core.utils import guard_import
 
+logger = logging.getLogger(__name__)
 
 def import_spacy() -> Any:
     """Import the spacy python package and raise an error if it is not installed."""
@@ -237,3 +240,38 @@ class BaseMetadataCallbackHandler:
         self.on_agent_finish_records = []
         self.on_agent_action_records = []
         return None
+
+
+def serialize(obj):
+    """Serializes an object for storage in the database.
+
+    Parameters
+    ----------
+    obj :
+        Object to be serialized
+    """  # noqa: D401
+    return dumps(obj).replace("'", "''")
+
+
+def record_llm_history(conn, prompts: str, response: str):
+    """Record the LLM history in the database."""
+    raw_response = response.json()
+    try:
+        response_json = loads(raw_response)
+        run_id = response_json["id"]
+        logger.insert(f"llm_history - run_ids={run_id}")
+    except Exception:
+        logger.insert(f"llm_history - run_id=unknown ({raw_response})")
+
+    cursor = conn.cursor()
+    cursor.execute(
+        f"""
+            INSERT INTO llm_history(prompts, llm_result)
+            VALUES ('{serialize(prompts)}', '{serialize(raw_response)}')
+            RETURNING id
+        """,
+    )
+    conn.commit()
+    llm_history = cursor.fetchone()[0]
+
+    return llm_history

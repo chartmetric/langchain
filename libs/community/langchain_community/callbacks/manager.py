@@ -14,6 +14,7 @@ from langchain_community.callbacks.bedrock_anthropic_callback import (
     BedrockAnthropicTokenUsageCallbackHandler,
 )
 from langchain_community.callbacks.openai_info import OpenAICallbackHandler
+from langchain_community.callbacks.anthropic_callback import AnthropicTokenUsageCallbackHandler
 from langchain_community.callbacks.tracers.comet import CometTracer
 from langchain_community.callbacks.tracers.wandb import WandbTracer
 
@@ -21,6 +22,9 @@ logger = logging.getLogger(__name__)
 
 openai_callback_var: ContextVar[Optional[OpenAICallbackHandler]] = ContextVar(
     "openai_callback", default=None
+)
+anthropic_callback_var: ContextVar[Optional[AnthropicTokenUsageCallbackHandler]] = ContextVar(
+    "anthropic_callback", default=None
 )
 bedrock_anthropic_callback_var: (ContextVar)[
     Optional[BedrockAnthropicTokenUsageCallbackHandler]
@@ -33,6 +37,7 @@ comet_tracing_callback_var: ContextVar[Optional[CometTracer]] = ContextVar(
 )
 
 register_configure_hook(openai_callback_var, True)
+register_configure_hook(anthropic_callback_var, True)
 register_configure_hook(bedrock_anthropic_callback_var, True)
 register_configure_hook(
     wandb_tracing_callback_var, True, WandbTracer, "LANGCHAIN_WANDB_TRACING"
@@ -79,6 +84,27 @@ def get_bedrock_anthropic_callback() -> (
     bedrock_anthropic_callback_var.set(cb)
     yield cb
     bedrock_anthropic_callback_var.set(None)
+
+
+@contextmanager
+def get_anthropic_callback() -> Generator[AnthropicTokenUsageCallbackHandler, None, None]:
+    """Get the Anthropic callback handler in a context manager.
+
+    which conveniently exposes token and cost information.
+
+    Returns
+    -------
+        AnthropicTokenUsageCallbackHandler:
+            The Anthropic callback handler.
+
+    Example:
+        >>> with get_anthropic_callback() as cb:
+        ...     # Use the Anthropic callback handler
+    """
+    cb = AnthropicTokenUsageCallbackHandler()
+    anthropic_callback_var.set(cb)
+    yield cb
+    anthropic_callback_var.set(None)
 
 
 @contextmanager
