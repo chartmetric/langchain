@@ -18,6 +18,7 @@ class RecordTokenUsageCallbackHandler(BaseCallbackHandler):
     prompt_tokens: int = 0
     completion_tokens: int = 0
     successful_requests: int = 0
+    llm_history: Dict[str, Any]
 
     def __init__(self) -> None:
         super().__init__()
@@ -38,6 +39,7 @@ class RecordTokenUsageCallbackHandler(BaseCallbackHandler):
 
     def on_llm_start(self, serialized: Dict[str, Any], prompts: List[str], **kwargs: Any) -> None:
         """Print out the prompts."""
+        self.prompts = prompts
 
     def on_llm_new_token(self, token: str, **kwargs: Any) -> None:
         """Print out the token."""
@@ -46,12 +48,23 @@ class RecordTokenUsageCallbackHandler(BaseCallbackHandler):
         """Collect token usage."""
 
         try:
-            if isinstance(response, AIMessage):
-                usage_metadata = response.usage_metadata
-            else:
+            generation = response.generations[0][0]
+        except IndexError:
+            generation = None
+        if isinstance(generation, ChatGeneration):
+            try:
+                message = generation.message
+                run_id = message.id
+                if isinstance(message, AIMessage):
+                    usage_metadata = message.usage_metadata
+                else:
+                    usage_metadata = None
+            except AttributeError:
                 usage_metadata = None
-        except AttributeError:
+                
+        else:
             usage_metadata = None
+            run_id = None
 
 
         # compute tokens and cost for this request
@@ -60,7 +73,7 @@ class RecordTokenUsageCallbackHandler(BaseCallbackHandler):
         total_tokens = (usage_metadata or {}).get("total_tokens", 0)
         
         with get_db_connection() as conn:
-            self.llm_history = record_llm_history(conn, self.prompts, response)
+            self.llm_history = record_llm_history(conn, self.prompts, response, run_id)
 
         # update shared state behind lock
         with self._lock:

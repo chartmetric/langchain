@@ -91,6 +91,7 @@ class AnthropicTokenUsageCallbackHandler(BaseCallbackHandler):
         if isinstance(generation, ChatGeneration):
             try:
                 message = generation.message
+                run_id = message.id
                 if isinstance(message, AIMessage):
                     usage_metadata = message.usage_metadata
                     response_metadata = message.response_metadata
@@ -103,6 +104,7 @@ class AnthropicTokenUsageCallbackHandler(BaseCallbackHandler):
         else:
             usage_metadata = None
             response_metadata = None
+            run_id = None
 
         # compute tokens and cost for this request
         completion_tokens = (usage_metadata or {}).get("output_tokens", 0)
@@ -116,7 +118,7 @@ class AnthropicTokenUsageCallbackHandler(BaseCallbackHandler):
         )
         
         with get_db_connection() as conn:
-            self.llm_history = record_llm_history(conn, self.prompts, response)
+            self.llm_history = record_llm_history(conn, self.prompts, response, run_id)
 
         # update shared state behind lock
         with self._lock:

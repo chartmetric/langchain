@@ -251,15 +251,19 @@ class OpenAICallbackHandler(BaseCallbackHandler):
                 if isinstance(message, AIMessage):
                     usage_metadata = message.usage_metadata
                     response_metadata = message.response_metadata
+                    run_id = message.id
                 else:
                     usage_metadata = None
                     response_metadata = None
+                    run_id = None
             except AttributeError:
                 usage_metadata = None
                 response_metadata = None
+                run_id = None
         else:
             usage_metadata = None
             response_metadata = None
+            run_id = None
         if usage_metadata:
             token_usage = {"total_tokens": usage_metadata["total_tokens"]}
             completion_tokens = usage_metadata["output_tokens"]
@@ -299,7 +303,7 @@ class OpenAICallbackHandler(BaseCallbackHandler):
             prompt_cost = 0
         
         with get_db_connection() as conn:
-            self.llm_history = record_llm_history(conn, self.prompts, message)
+            self.llm_history = record_llm_history(conn, self.prompts, response, run_id)
 
         # update shared state behind lock
         with self._lock:
