@@ -13,6 +13,7 @@ from langchain_core.tracers.context import register_configure_hook
 from langchain_community.callbacks.bedrock_anthropic_callback import (
     BedrockAnthropicTokenUsageCallbackHandler,
 )
+from langchain_community.callbacks.record_callback import RecordTokenUsageCallbackHandler
 from langchain_community.callbacks.openai_info import OpenAICallbackHandler
 from langchain_community.callbacks.anthropic_callback import AnthropicTokenUsageCallbackHandler
 from langchain_community.callbacks.tracers.comet import CometTracer
@@ -20,6 +21,9 @@ from langchain_community.callbacks.tracers.wandb import WandbTracer
 
 logger = logging.getLogger(__name__)
 
+record_callback_var: ContextVar[Optional[RecordTokenUsageCallbackHandler]] = ContextVar(
+    "recoard_callback", default=None
+)
 openai_callback_var: ContextVar[Optional[OpenAICallbackHandler]] = ContextVar(
     "openai_callback", default=None
 )
@@ -36,6 +40,7 @@ comet_tracing_callback_var: ContextVar[Optional[CometTracer]] = ContextVar(
     "tracing_comet_callback", default=None
 )
 
+register_configure_hook(record_callback_var, True)
 register_configure_hook(openai_callback_var, True)
 register_configure_hook(anthropic_callback_var, True)
 register_configure_hook(bedrock_anthropic_callback_var, True)
@@ -45,6 +50,24 @@ register_configure_hook(
 register_configure_hook(
     comet_tracing_callback_var, True, CometTracer, "LANGCHAIN_COMET_TRACING"
 )
+
+
+@contextmanager
+def get_record_callback() -> Generator[RecordTokenUsageCallbackHandler, None, None]:
+    """Get the record callback handler in a context manager.
+    which conveniently exposes token information.
+
+    Returns:
+        RecordTokenUsageCallbackHandler: The Record callback handler.
+
+    Example:
+        >>> with get_record_callback() as cb:
+        ...     # Use the Record callback handler
+    """
+    cb = RecordTokenUsageCallbackHandler()
+    record_callback_var.set(cb)
+    yield cb
+    record_callback_var.set(None)
 
 
 @contextmanager

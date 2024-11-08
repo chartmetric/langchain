@@ -1,7 +1,6 @@
 """Callback Handler that prints to std out."""
 
 import threading
-import time
 from typing import Any, Dict, List
 
 from data_utils.db_access import get_db_connection
@@ -203,14 +202,13 @@ def get_openai_token_cost_for_model(
 class OpenAICallbackHandler(BaseCallbackHandler):
     """Callback Handler that tracks OpenAI info."""
 
-    start_time: float = 0
     prompts: List[str]
     total_tokens: int = 0
     prompt_tokens: int = 0
     completion_tokens: int = 0
     successful_requests: int = 0
     total_cost: float = 0.0
-    llm_history: Dict[str, Any]
+    llm_history: int = None
 
     def __init__(self) -> None:
         super().__init__()
@@ -235,7 +233,6 @@ class OpenAICallbackHandler(BaseCallbackHandler):
     ) -> None:
         """Print out the prompts."""
         self.prompts = prompts
-        self.start_time = time.time()
 
     def on_llm_new_token(self, token: str, **kwargs: Any) -> None:
         """Print out the token."""
@@ -254,15 +251,19 @@ class OpenAICallbackHandler(BaseCallbackHandler):
                 if isinstance(message, AIMessage):
                     usage_metadata = message.usage_metadata
                     response_metadata = message.response_metadata
+                    run_id = message.id
                 else:
                     usage_metadata = None
                     response_metadata = None
+                    run_id = None
             except AttributeError:
                 usage_metadata = None
                 response_metadata = None
+                run_id = None
         else:
             usage_metadata = None
             response_metadata = None
+            run_id = None
         if usage_metadata:
             token_usage = {"total_tokens": usage_metadata["total_tokens"]}
             completion_tokens = usage_metadata["output_tokens"]
@@ -302,7 +303,7 @@ class OpenAICallbackHandler(BaseCallbackHandler):
             prompt_cost = 0
         
         with get_db_connection() as conn:
-            self.llm_history = record_llm_history(conn, self.prompts, response)
+            self.llm_history = record_llm_history(conn, self.prompts, response, run_id)
 
         # update shared state behind lock
         with self._lock:

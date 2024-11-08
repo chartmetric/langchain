@@ -253,15 +253,13 @@ def serialize(obj):
     return dumps(obj).replace("'", "''")
 
 
-def record_llm_history(conn, prompts: str, response: str):
+def record_llm_history(conn, prompts: str, response: str, run_id: str):
     """Record the LLM history in the database."""
     raw_response = response.json()
     try:
-        response_json = loads(raw_response)
-        run_id = response_json["id"]
-        logger.insert(f"llm_history - run_ids={run_id}")
+        logger.info(f"llm_history - run_ids={run_id}")
     except Exception:
-        logger.insert(f"llm_history - run_id=unknown ({raw_response})")
+        logger.info(f"llm_history - run_id=unknown ({raw_response})")
 
     cursor = conn.cursor()
     cursor.execute(
