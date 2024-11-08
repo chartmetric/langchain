@@ -10,9 +10,6 @@ from langchain_core.outputs import ChatGeneration, LLMResult
 from .utils import record_llm_history
 
 MODEL_COST_PER_1K_INPUT_TOKENS = {
-    "claude-instant-1.2": 0.0008,
-    "claude-2.0": 0.008,
-    "claude-2.1": 0.008,
     "claude-3-sonnet-20240229": 0.003,
     "claude-3-opus-20240229": 0.075,
     "claude-3-5-haiku-20241022": 0.001,
@@ -22,9 +19,6 @@ MODEL_COST_PER_1K_INPUT_TOKENS = {
 }
 
 MODEL_COST_PER_1K_OUTPUT_TOKENS = {
-    "claude-instant-1.2": 0.0024,
-    "claude-2.0": 0.024,
-    "claude-2.1": 0.024,
     "claude-3-sonnet-20240229": 0.015,
     "claude-3-opus-20240229": 0.075,
     "claude-3-5-haiku-20241022": 0.005,
@@ -55,7 +49,7 @@ class AnthropicTokenUsageCallbackHandler(BaseCallbackHandler):
     completion_tokens: int = 0
     successful_requests: int = 0
     total_cost: float = 0.0
-    llm_history: Dict[str, Any]
+    llm_history: int = None
 
     def __init__(self) -> None:
         super().__init__()

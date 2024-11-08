@@ -18,7 +18,7 @@ class RecordTokenUsageCallbackHandler(BaseCallbackHandler):
     prompt_tokens: int = 0
     completion_tokens: int = 0
     successful_requests: int = 0
-    llm_history: Dict[str, Any]
+    llm_history: int = None
 
     def __init__(self) -> None:
         super().__init__()
